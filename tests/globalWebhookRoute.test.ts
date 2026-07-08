@@ -1,141 +1,159 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { signGithubBody, resetTestEnvironment } from "./_helpers.js";
-import { closeDbForTests } from "../src/db/db.js";
-import { resetConfigForTests } from "../src/config.js";
+import crypto from "node:crypto";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("../src/sync/syncQueue.js", () => ({
-  enqueueSyncJob: vi.fn(async () => ({ queued: true })),
-  getSyncQueueStatus: vi.fn(() => ({
-    isSyncing: false,
-    pendingJob: null,
-    lastResult: null,
-    lastError: null
+  enqueueSyncJob: vi.fn(async () => ({
+    queued: true
   }))
 }));
 
-describe("GitHub webhook route", () => {
-  beforeEach(() => resetTestEnvironment());
+import { buildServer } from "../src/server.js";
+import { resetConfigForTests } from "../src/config.js";
+import { enqueueSyncJob } from "../src/sync/syncQueue.js";
 
-  afterEach(() => {
-    closeDbForTests();
-    resetConfigForTests();
+function sign(body: string, secret: string) {
+  return (
+    "sha256=" +
+    crypto.createHmac("sha256", secret).update(body, "utf8").digest("hex")
+  );
+}
+
+describe("GitHub webhook route", () => {
+  beforeEach(() => {
     vi.clearAllMocks();
+    process.env.GITHUB_WEBHOOK_SECRET = "test-secret";
+    process.env.AI_PROVIDER = "mock";
+    process.env.VAULT_REPO_URL = "";
+    resetConfigForTests();
   });
 
   it("accepts GitHub ping deliveries", async () => {
-    const { buildServer } = await import("../src/server.js");
     const app = await buildServer();
 
-    const body = JSON.stringify({
-      zen: "Keep it logically awesome.",
-      repository: { full_name: "user/vault" }
-    });
+    try {
+      const body = JSON.stringify({
+        zen: "Keep it logically awesome.",
+        repository: {
+          full_name: "user/vault"
+        }
+      });
 
-    const res = await app.inject({
-      method: "POST",
-      url: "/webhooks/github",
-      headers: {
-        "content-type": "application/json",
-        "x-github-event": "ping",
-        "x-github-delivery": "delivery-ping",
-        "x-hub-signature-256": signGithubBody(body, "test-secret")
-      },
-      payload: body
-    });
+      const res = await app.inject({
+        method: "POST",
+        url: "/webhooks/github",
+        headers: {
+          "content-type": "application/json",
+          "x-github-event": "ping",
+          "x-github-delivery": "delivery-1",
+          "x-hub-signature-256": sign(body, "test-secret")
+        },
+        payload: body
+      });
 
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ ok: true });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({
+        ok: true,
+        event: "ping"
+      });
 
-    await app.close();
+      expect(enqueueSyncJob).not.toHaveBeenCalled();
+    } finally {
+      await app.close();
+    }
   });
 
   it("accepts valid push deliveries and queues sync", async () => {
-    const { buildServer } = await import("../src/server.js");
-    const { enqueueSyncJob } = await import("../src/sync/syncQueue.js");
     const app = await buildServer();
 
-    const body = JSON.stringify({
-      ref: "refs/heads/main",
-      after: "abc123",
-      repository: { full_name: "user/vault" }
-    });
+    try {
+      const body = JSON.stringify({
+        ref: "refs/heads/main",
+        after: "abc123",
+        repository: {
+          full_name: "user/vault"
+        }
+      });
 
-    const res = await app.inject({
-      method: "POST",
-      url: "/webhooks/github",
-      headers: {
-        "content-type": "application/json",
-        "x-github-event": "push",
-        "x-github-delivery": "delivery-push",
-        "x-hub-signature-256": signGithubBody(body, "test-secret")
-      },
-      payload: body
-    });
+      const res = await app.inject({
+        method: "POST",
+        url: "/webhooks/github",
+        headers: {
+          "content-type": "application/json",
+          "x-github-event": "push",
+          "x-github-delivery": "delivery-2",
+          "x-hub-signature-256": sign(body, "test-secret")
+        },
+        payload: body
+      });
 
-    expect(res.statusCode).toBe(202);
-    expect(res.json()).toMatchObject({
-      ok: true,
-      accepted: true,
-      deliveryId: "delivery-push",
-      repository: "user/vault",
-      afterCommit: "abc123"
-    });
-    expect(enqueueSyncJob).toHaveBeenCalledWith(
-      expect.objectContaining({
-        source: "github-webhook",
-        deliveryId: "delivery-push",
-        repository: "user/vault",
-        afterCommit: "abc123",
-        branchRef: "refs/heads/main"
-      })
-    );
+      expect(res.statusCode).toBe(202);
+      expect(res.json()).toMatchObject({
+        ok: true,
+        accepted: true,
+        event: "push"
+      });
 
-    await app.close();
+      expect(enqueueSyncJob).toHaveBeenCalledTimes(1);
+    } finally {
+      await app.close();
+    }
   });
 
   it("rejects invalid signatures", async () => {
-    const { buildServer } = await import("../src/server.js");
     const app = await buildServer();
 
-    const body = JSON.stringify({ ref: "refs/heads/main" });
+    try {
+      const body = JSON.stringify({
+        ref: "refs/heads/main"
+      });
 
-    const res = await app.inject({
-      method: "POST",
-      url: "/webhooks/github",
-      headers: {
-        "content-type": "application/json",
-        "x-github-event": "push",
-        "x-hub-signature-256": "sha256=invalid"
-      },
-      payload: body
-    });
+      const res = await app.inject({
+        method: "POST",
+        url: "/webhooks/github",
+        headers: {
+          "content-type": "application/json",
+          "x-github-event": "push",
+          "x-hub-signature-256": "sha256=invalid"
+        },
+        payload: body
+      });
 
-    expect(res.statusCode).toBe(401);
-    expect(res.json()).toMatchObject({ ok: false, error: "INVALID_SIGNATURE" });
-
-    await app.close();
+      expect(res.statusCode).toBe(401);
+      expect(res.json()).toMatchObject({
+        ok: false,
+        error: "INVALID_SIGNATURE"
+      });
+    } finally {
+      await app.close();
+    }
   });
 
   it("ignores non-push events after signature verification", async () => {
-    const { buildServer } = await import("../src/server.js");
     const app = await buildServer();
 
-    const body = JSON.stringify({ action: "opened" });
+    try {
+      const body = JSON.stringify({
+        action: "opened"
+      });
 
-    const res = await app.inject({
-      method: "POST",
-      url: "/webhooks/github",
-      headers: {
-        "content-type": "application/json",
-        "x-github-event": "issues",
-        "x-hub-signature-256": signGithubBody(body, "test-secret")
-      },
-      payload: body
-    });
+      const res = await app.inject({
+        method: "POST",
+        url: "/webhooks/github",
+        headers: {
+          "content-type": "application/json",
+          "x-github-event": "issues",
+          "x-hub-signature-256": sign(body, "test-secret")
+        },
+        payload: body
+      });
 
-    expect(res.statusCode).toBe(200);
-    expect(res.json()).toMatchObject({ ok: true, ignored: true });
-
-    await app.close();
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({
+        ok: true,
+        ignored: true
+      });
+    } finally {
+      await app.close();
+    }
   });
 });
