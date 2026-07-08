@@ -13,11 +13,11 @@ const ConfigSchema = z.object({
     vaultLocalPath: z.string().min(1).default("./vault-cache"),
     databasePath: z.string().min(1).default("./data/notes.db"),
     aiProvider: z.enum(["mock", "portkey"]).default("mock"),
-    aiModel: z.string().min(1).default("@your-provider-slug/claude-sonnet-4-5-20250929"),
+    aiModel: z.string().min(1).default("@ctf-copilot/claude-sonnet-4-5-20250929"),
     aiMaxTokens: z.coerce.number().int().positive().default(1800),
     aiTemperature: z.coerce.number().min(0).max(1).default(0),
     portkeyApiKey: z.string().optional(),
-    portkeyProvider: z.string().min(1).default("anthropic"),
+    portkeyProvider: z.string().min(1).default(""),
 
     portkeyBaseUrl: z.string().url().default("https://api.portkey.ai/v1/messages"),
     portkeyRequestTimeoutMs: z.coerce.number().int().positive().default(45000)

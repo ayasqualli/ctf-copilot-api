@@ -43,7 +43,6 @@ export async function createClaudeMessage(params: {
       headers: {
         "Content-Type": "application/json",
         "x-portkey-api-key": config.portkeyApiKey,
-        "x-portkey-provider": config.portkeyProvider,
         "x-portkey-trace-id": params.requestId,
         "x-portkey-metadata": JSON.stringify({
           _user: params.userId,
