@@ -17,7 +17,7 @@ const ConfigSchema = z.object({
     aiMaxTokens: z.coerce.number().int().positive().default(1800),
     aiTemperature: z.coerce.number().min(0).max(1).default(0),
     portkeyApiKey: z.string().optional(),
-    portkeyProvider: z.string().min(1).default(""),
+    portkeyProvider: z.string().default(""),
 
     portkeyBaseUrl: z.string().url().default("https://api.portkey.ai/v1/messages"),
     portkeyRequestTimeoutMs: z.coerce.number().int().positive().default(45000)
