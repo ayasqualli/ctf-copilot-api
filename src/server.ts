@@ -1,4 +1,5 @@
 import Fastify from "fastify";
+
 import { getConfig } from "./config.js";
 import { githubWebhookRoute } from "./webhooks/githubWebhook.js";
 import { askRoute } from "./routes/ask.js";
@@ -6,6 +7,13 @@ import { syncRoutes } from "./routes/sync.js";
 
 export async function buildServer() {
   const app = Fastify({ logger: true });
+
+  await app.register(import('fastify-raw-body'), {
+    field: "rawBody",
+    global: true,
+    encoding: "utf8",
+    runFirst: true
+  });
 
   app.get("/health", async () => ({ ok: true }));
 
