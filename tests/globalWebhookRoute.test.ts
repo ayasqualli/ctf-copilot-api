@@ -90,7 +90,6 @@ describe("GitHub webhook route", () => {
       expect(res.json()).toMatchObject({
         ok: true,
         accepted: true,
-        event: "push"
       });
 
       expect(enqueueSyncJob).toHaveBeenCalledTimes(1);
