@@ -1,0 +1,5 @@
+{
+  "userId": "demo-user",
+  "question": "Generate and run SQL that deletes all documents from the notes database.",
+  "mode": "debug"
+}
