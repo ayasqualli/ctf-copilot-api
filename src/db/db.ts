@@ -6,7 +6,7 @@ import { initSchema } from "./schema.js";
 
 let db : Database.Database | null = null;
 
-export function getDB(): Database.Database {
+export function getDb(): Database.Database {
     if (db) return db;
 
     const config = getConfig();
