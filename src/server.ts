@@ -13,7 +13,7 @@ export async function buildServer() {
   await app.register(syncRoutes);
   await app.register(askRoute);
 
-  app.setErrorHandler((error, request, reply) => {
+  app.setErrorHandler((error: Error, request, reply) => {
     request.log.error(error);
     reply.code(500).send({
       ok: false,
