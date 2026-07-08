@@ -13,7 +13,7 @@ export type SyncMetadata= {
 };
 
 export async function syncVaultNow(
-    source: "girhub-webhook" | "manual",
+    source: "github-webhook" | "manual",
     metadata?: SyncMetadata
 ) {
     const config = getConfig();
@@ -39,7 +39,7 @@ export async function syncVaultNow(
 
     const git = simpleGit(localPath);
     const commitSha = (await git.revparse(["HEAD"])).trim();
-    const changedFiles = await indexChangedMarkdownFiles(localPath);
+    const changedFiles = await listenTrackedMarkdownFiles(localPath);
     const indexed = await indexChangedMarkdownFiles({
         vaultPath: localPath,
         files: changedFiles,
