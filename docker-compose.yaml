@@ -1,0 +1,13 @@
+services:
+  ctf-copilot-api:
+    build: .
+    container_name: ctf-copilot-api
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - ./vault-cache:/app/vault-cache
+    restart: until-stopped
+    
