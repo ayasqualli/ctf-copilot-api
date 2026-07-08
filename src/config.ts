@@ -62,6 +62,6 @@ export function getConfig(): AppConfig {
         return cached;
 }
 
-export function resetConfigForTest() {
+export function resetConfigForTests() {
     cached = null;
 }

@@ -30,7 +30,7 @@ export async function githubWebhookRoute(app: FastifyInstance) {
       }
 
       const event = request.headers["x-github-event"];
-      const deliveryId = request.headers["x-github-delivery"];
+      const deliveryId = request.headers["x-github-delivery"] as string | undefined;
 
       if (event === "ping") {
         return reply.code(200).send({
