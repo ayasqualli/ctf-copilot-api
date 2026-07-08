@@ -1,0 +1,36 @@
+{
+  "name": "ctf-copilot-api",
+  "version": "1.0.0",
+  "description": "Webhook-synced Obsidian vault AI service using Claude through Portkey, structured output, tools, and guardrails.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "tsx src/server.ts",
+    "start": "node dist/server.js",
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "sync": "tsx src/scripts/sync.ts",
+    "lint:types": "tsc --noEmit",
+    "ingest:sample": "tsx src/scripts/indexSample.ts"
+  },
+  "dependencies": {
+    "fastify-raw-body": "^5.0.0",
+    "better-sqlite3": "^11.9.1",
+    "dotenv": "^16.4.7",
+    "fastify": "^5.2.1",
+    "simple-git": "^3.27.0",
+    "zod": "^3.24.2",
+    "zod-to-json-schema": "^3.24.5"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.5",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.3",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}
